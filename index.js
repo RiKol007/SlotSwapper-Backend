@@ -8,7 +8,31 @@ const eventRoutes = require('./routes/events');
 const swapRoutes = require('./routes/swaps');
 
 const app = express();
-app.use(cors());
+
+const defaultOrigins = [
+  'https://slot-swapper-frontend-eta.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173'
+];
+const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.FRONTEND_URL || defaultOrigins.join(','))
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+if (process.env.NODE_ENV === 'production') {
+  const weakSecrets = new Set(['mystrongsecret', 'secret', 'changeme', 'password']);
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || weakSecrets.has(process.env.JWT_SECRET)) {
+    throw new Error('JWT_SECRET must be set to a strong production secret of at least 32 characters');
+  }
+}
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // routes
